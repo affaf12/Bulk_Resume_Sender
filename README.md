@@ -5,6 +5,13 @@ This tool is designed for job applicants, recruiters, or anyone who wants to sen
 
 ---
 
+## 🌐 Live Demo
+
+You can try the app live here:  
+[🔗 Open Bulk Resume Sender](https://bulkresumesender-4yjpfvwulqh8pyjjkqbotd.streamlit.app/)
+
+---
+
 ## 🚀 Features
 
 - Upload **single or multiple PDF resumes**
