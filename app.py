@@ -6,13 +6,15 @@ from email.mime.application import MIMEApplication
 import time, traceback
 import pandas as pd
 import os
+import datetime
 
 st.set_page_config(page_title="Bulk Resume Sender", page_icon="📧")
 st.title("📤 Bulk Resume Email Sender")
 
 st.markdown("""
 Upload your resume PDFs and send personalized emails to multiple recipients.
-You can manually enter recipients below (one per line, format: email, company).
+You can manually enter recipients below (one per line, format: email, company),
+or upload a CSV with columns: email, company.
 """)
 
 # Upload resumes (multiple)
@@ -23,6 +25,9 @@ recipients_input = st.text_area(
     "📥 Enter recipients (one per line, format: email, company):"
 )
 
+# CSV recipients upload
+uploaded_csv = st.file_uploader("📂 Upload recipients CSV (optional)", type="csv")
+
 # Cold email input
 email_body_template = st.text_area(
     "✉️ Write your cold email here (use {company} for company name and {email} for your email):"
@@ -32,13 +37,17 @@ email_body_template = st.text_area(
 EMAIL_USER = st.text_input("✉️ Your Gmail address")
 EMAIL_PASS = st.text_input("🔑 Gmail App Password", type="password", help="Use Gmail App Password if 2FA is enabled")
 
-# Email subject input
+# Email subject input (supports {company})
 EMAIL_SUBJECT = st.text_input(
     "📝 Email Subject",
-    value="Application for Data Analyst Position – Onsite / Relocation"
+    value="Application for Data Analyst Position at {company} – Onsite / Relocation"
 )
 
 SEND_DELAY_SECONDS = st.slider("⏱ Delay between emails (seconds)", 0, 10, 2)
+
+# Schedule date and time
+schedule_date = st.date_input("📅 Select Date to Send Emails", datetime.date.today())
+schedule_time = st.time_input("⏰ Select Time to Send Emails", datetime.datetime.now().time())
 
 if st.button("🚀 Start Sending Emails"):
     if not uploaded_files:
@@ -47,6 +56,8 @@ if st.button("🚀 Start Sending Emails"):
         st.error("❌ Please enter your Gmail credentials!")
     elif not EMAIL_SUBJECT.strip():
         st.error("❌ Please enter an email subject!")
+    elif not email_body_template.strip():
+        st.error("❌ Please enter the email body!")
     else:
         # Save uploaded files
         filenames = []
@@ -57,7 +68,7 @@ if st.button("🚀 Start Sending Emails"):
             filenames.append(filename)
         st.success(f"✅ Using uploaded files: {', '.join(filenames)}")
 
-        # Parse recipients input
+        # Parse recipients from manual input
         recipients = []
         for line in recipients_input.strip().split("\n"):
             parts = line.split(",", 1)
@@ -65,11 +76,30 @@ if st.button("🚀 Start Sending Emails"):
                 email, company = parts
                 recipients.append({"email": email.strip(), "company": company.strip()})
             else:
-                st.warning(f"Skipping invalid line: {line}")
+                if line.strip():  # ignore empty lines
+                    st.warning(f"Skipping invalid line: {line}")
+
+        # Parse recipients from CSV if uploaded
+        if uploaded_csv:
+            try:
+                df_csv = pd.read_csv(uploaded_csv)
+                for _, row in df_csv.iterrows():
+                    recipients.append({"email": str(row['email']).strip(), "company": str(row['company']).strip()})
+                st.success(f"✅ Loaded {len(df_csv)} recipients from CSV")
+            except Exception as e:
+                st.error(f"❌ Failed to read CSV: {e}")
 
         if not recipients:
             st.error("❌ No valid recipients provided.")
             st.stop()
+
+        # Calculate scheduled time delay
+        scheduled_datetime = datetime.datetime.combine(schedule_date, schedule_time)
+        now = datetime.datetime.now()
+        seconds_to_wait = (scheduled_datetime - now).total_seconds()
+        if seconds_to_wait > 0:
+            st.info(f"⏳ Waiting {int(seconds_to_wait)} seconds until scheduled time...")
+            time.sleep(seconds_to_wait)
 
         # Connect to SMTP
         try:
@@ -93,7 +123,7 @@ if st.button("🚀 Start Sending Emails"):
                 msg = MIMEMultipart()
                 msg["From"] = EMAIL_USER
                 msg["To"] = email
-                msg["Subject"] = EMAIL_SUBJECT
+                msg["Subject"] = EMAIL_SUBJECT.format(company=company)
 
                 body = email_body_template.format(company=company, email=EMAIL_USER)
                 msg.attach(MIMEText(body, "plain"))
