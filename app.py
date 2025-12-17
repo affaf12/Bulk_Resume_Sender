@@ -3,7 +3,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
-import time, traceback
+import time, traceback, os
 import pandas as pd
 import datetime
 import pytz
@@ -57,6 +57,13 @@ schedule_time = st.time_input("⏰ Select Time (Country Local Time)", datetime.t
 # -------------------- DAILY LIMIT --------------------
 DAILY_EMAIL_LIMIT = st.slider("📊 Daily Email Limit (safe for Gmail)", 50, 300, 100, step=10)
 
+# -------------------- LOG FILE FOR TRACKING --------------------
+LOG_FILE = "sent_log.csv"
+if os.path.exists(LOG_FILE):
+    sent_log = pd.read_csv(LOG_FILE)
+else:
+    sent_log = pd.DataFrame(columns=["email", "company", "date_sent"])
+
 # -------------------- START BUTTON --------------------
 if st.button("🚀 Start Sending Emails"):
 
@@ -101,6 +108,16 @@ if st.button("🚀 Start Sending Emails"):
         st.error("❌ No recipients found!")
         st.stop()
 
+    # -------------------- REMOVE ALREADY SENT TODAY --------------------
+    today = datetime.date.today()
+    sent_today = sent_log[sent_log["date_sent"] == str(today)]
+    already_sent_emails = sent_today["email"].tolist()
+    recipients = [r for r in recipients if r["email"] not in already_sent_emails]
+
+    if not recipients:
+        st.warning("✅ All recipients have already received emails today. Nothing to send.")
+        st.stop()
+
     # -------------------- TIMEZONE LOGIC --------------------
     target_tz = pytz.timezone(COUNTRY_TIMEZONES[selected_country])
     local_tz = pytz.timezone("Asia/Karachi")  # change if needed
@@ -132,7 +149,7 @@ if st.button("🚀 Start Sending Emails"):
     # -------------------- SEND EMAILS --------------------
     progress = st.progress(0)
     failures = []
-    emails_sent_today = 0
+    emails_sent_today = len(sent_today)
 
     for i, r in enumerate(recipients, 1):
 
@@ -157,6 +174,15 @@ if st.button("🚀 Start Sending Emails"):
 
             smtp.sendmail(EMAIL_USER, r["email"], msg.as_string())
             emails_sent_today += 1
+
+            # -------------------- LOG EMAIL --------------------
+            sent_log = pd.concat([sent_log, pd.DataFrame([{
+                "email": r["email"],
+                "company": r["company"],
+                "date_sent": str(today)
+            }])], ignore_index=True)
+            sent_log.to_csv(LOG_FILE, index=False)
+
             st.success(f"✅ Sent ({emails_sent_today}/{DAILY_EMAIL_LIMIT}) → {r['email']} ({r['company']})")
 
         except Exception as e:
