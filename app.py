@@ -201,3 +201,7 @@ if st.button("🚀 Start Sending Emails"):
         df_fail = pd.DataFrame(failures)
         df_fail.to_csv("failed_emails.csv", index=False)
         st.download_button("📥 Download Failed Emails", "failed_emails.csv")
+
+
+
+# gjlk lcrs qqvc tggz
