@@ -30,6 +30,7 @@ COUNTRY_TIMEZONES = {
     "Canada": "Canada/Eastern",
     "Germany": "Europe/Berlin",
     "UAE": "Asia/Dubai"
+    "New Zealand": "Pacific/Auckland"
 }
 
 # -------------------- UPLOADS --------------------
