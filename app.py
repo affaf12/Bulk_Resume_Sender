@@ -29,7 +29,7 @@ COUNTRY_TIMEZONES = {
     "USA (PST)": "US/Pacific",
     "Canada": "Canada/Eastern",
     "Germany": "Europe/Berlin",
-    "UAE": "Asia/Dubai"
+    "UAE": "Asia/Dubai",
     "New Zealand": "Pacific/Auckland"
 }
 
